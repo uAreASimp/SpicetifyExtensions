@@ -1,10 +1,18 @@
+// NAME: Autoplay
+// AUTHOR: uAreASimp
+// VERSION: 0.1
+// DESCRIPTION: Autoplays selected song after having song be paused for 5 seconds, pause song to revert back to original before autoplay.
+    
 
 (function AutoPlay() {
 
+    //CHANGE FOR SONG YOU WANT TO AUTOPLAY
+    const SONG_URI = "spotify:track:0MUQtVlIkuMeDfZFm5xKRq"
+
+    
     // Constants
     const BUTTON_NAME_TEXT = "AutoPlay";
     const STORAGE_KEY = "autoplay_spicetify";
-    const SONG_URI = "spotify:track:0MUQtVlIkuMeDfZFm5xKRq"
 
 
 
@@ -57,24 +65,24 @@
 
         // Check if autoPlayVar is true
         if (!autoPlayVar) {
-            console.log("Auto play is not enabled. Skipping playback state check.");
+           // console.log("Auto play is not enabled. Skipping playback state check.");
             clearTimer();
             return;
         }
 
-        console.log("Checking playback state...");
+      //  console.log("Checking playback state...");
         const playerState = getPlayerState();
 
         if (!playerState) {
-            console.log("No player state available.");
+          //  console.log("No player state available.");
             return;
         }
 
         const isPlaying = !playerState.isPaused;
-        console.log("isPlaying:", isPlaying);
+      //  console.log("isPlaying:", isPlaying);
 
         if (isPlaying) {
-            console.log("Song is playing. Clearing timer if it exists.");
+         //   console.log("Song is playing. Clearing timer if it exists.");
             clearTimer();
             lastPlayerState = playerState;
         } else {
@@ -82,7 +90,7 @@
                 restorePlaybackState();
             }
             else {
-                console.log("No song playing. Starting timer.");
+            //    console.log("No song playing. Starting timer.");
                 startTimer();
             }
         }
@@ -99,7 +107,7 @@
     function startTimer() {
         if (timerId === null) {
             timerId = setTimeout(() => {
-                console.log(`No song playing for ${WAIT_TIME} ms. Auto-playing song: ${SONG_URI}`);
+            //    console.log(`No song playing for ${WAIT_TIME} ms. Auto-playing song: ${SONG_URI}`);
                 saveCurrentPlaybackState();
                 Spicetify.Player.setVolume(0);
                 setTimeout(() => {
@@ -119,7 +127,7 @@
     }
 
     async function playSong(uri) {
-        console.log("Attempting to play song:", uri);
+     //   console.log("Attempting to play song:", uri);
         await Spicetify.Player.playUri(uri);
     }
 
