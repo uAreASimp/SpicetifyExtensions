@@ -1,11 +1,11 @@
 // NAME: Autoplay
 // AUTHOR: uAreASimp
-// VERSION: 0.2
+// VERSION: 0.3
 // DESCRIPTION: Autoplays selected song after having song be paused for 5 seconds, pause song to revert back to original before autoplay.
 /// <reference path="../../../Local/spicetify/globals.d.ts" />
 
 
-(function AutoPlay() {
+(async function AutoPlay() {
 
     if (!(Spicetify.showNotification && Spicetify.Platform && Spicetify.ContextMenu && Spicetify.URI && Spicetify.SVGIcons)) {
         setTimeout(AutoPlay, 10);
@@ -13,16 +13,11 @@
     }
 
 
-    //CHANGE FOR SONG YOU WANT TO AUTOPLAY
-    let SONG_URI = localStorage.getItem("SONG_URI") || "spotify:track:4PTG3Z6ehGkBFwjybzWkR8";
-    //CHANGE FOR SONG YOU WANT TO AUTOPLAY
-
-
-
     // Constants
     const BUTTON_NAME_TEXT = "AutoPlay";
     const STORAGE_KEY = "autoplay_spicetify";
     const AUTO_PLAYED_KEY = "is_auto_played"
+    let playlisturi;
 
 
     // Add CSS for the textbox
@@ -52,14 +47,20 @@
 
     // Retrieve or initialize state from localStorage
     let autoPlayVar = localStorage.getItem(STORAGE_KEY) === "true";
-    let autoPlayedVar = localStorage.getItem(AUTO_PLAYED_KEY) === "true"; // Updated key here
+    let autoPlayedVar = localStorage.getItem(AUTO_PLAYED_KEY); // Updated key here
+    let SONG_URI = localStorage.getItem("SONG_URI") || "spotify:track:4PTG3Z6ehGkBFwjybzWkR8";
     let savedPlaybackState = null;
+    let songChangeCheck = false;
+    let isRestoring = false;
+    let isStartingAuto = false;
 
     // Initialize autoPlayedVar if it's not set
     if (autoPlayedVar === null) {
-        autoPlayedVar = true;
-        localStorage.setItem(AUTO_PLAYED_KEY, true);
+        autoPlayedVar = false;
+        localStorage.setItem(AUTO_PLAYED_KEY, false);
     }
+    autoPlayedVar = false;
+    localStorage.setItem(AUTO_PLAYED_KEY, false);
 
     // Reference to the button instance
     let autoplayButton;
@@ -109,9 +110,7 @@
     let timerId = null;
     let lastPlayerState = null;
 
-    // Function checkPlaybackState() is updated to ensure correct handling of autoPlayedVar
     function checkPlaybackState() {
-        // Check if autoPlayVar is true
         if (!autoPlayVar) {
             //console.log("Auto play is not enabled. Skipping playback state check.");
             clearTimer();
@@ -120,6 +119,7 @@
 
         //console.log("Checking playback state...");
         const playerState = getPlayerState();
+        //console.log(playerState)
 
         if (!playerState) {
             //console.log("No player state available.");
@@ -127,33 +127,48 @@
         }
 
         const isPlaying = !playerState.isPaused;
-        //console.log("isPlaying:", isPlaying);
 
         if (isPlaying) {
             //console.log("Song is playing. Clearing timer if it exists.");
             clearTimer();
             lastPlayerState = playerState;
-            if (!autoPlayedVar) {
-                document.getElementById('autoplayIndicator').style.display = 'none';
-            }
-        } else {
-            if (autoPlayedVar) { // Updated logic for autoPlayedVar
+            return;
+        } else if (playerState.isPaused && autoPlayVar) {
+            if (autoPlayedVar) {
+                //console.log("Restoring playback.")
                 restorePlaybackState();
+                return;
             } else {
                 //console.log("No song playing. Starting timer.");
                 startTimer();
-            }
-        }
-
-        if (playerState.isPaused && autoPlayVar) {
-            if (autoPlayedVar) { // Updated logic for autoPlayedVar
-                restorePlaybackState();
-            } else {
-                //console.log("No song playing. Starting timer.");
-                startTimer();
+                return;
             }
         }
     }
+
+
+
+    function songChange() {
+        console.log("Songchange check...")
+        if (songChangeCheck === true && isRestoring === false && isStartingAuto === false) {
+            savedPlaybackState = null; // Clear saved state after restoring
+            autoPlayedVar = false;
+            localStorage.setItem(AUTO_PLAYED_KEY, false); // Updated localStorage here
+            document.getElementById('autoplayIndicator').style.display = 'none';
+            songChangeCheck = false;
+            console.log("Songchange check approved.")
+        }
+    }
+
+
+
+
+    //// Register a listener that will be called when player changes track
+    //Spicetify.Player.addEventListener("songchange", (event) => {
+    //    console.log("SongChange event!")
+    //    queueCheck();
+    //});
+
 
 
     function getPlayerState() {
@@ -168,8 +183,10 @@
     function startTimer() {
         if (timerId === null && autoPlayVar) { // Check if autoPlayVar is true
             timerId = setTimeout(() => {
+                isStartingAuto = true;
                 console.log(`No song playing for ${WAIT_TIME} ms. Auto-playing song: ${SONG_URI}`);
                 saveCurrentPlaybackState();
+                Spicetify.Platform.PlayerAPI.clearQueue();
                 Spicetify.Player.setVolume(0);
                 setTimeout(() => {
                     playSong(SONG_URI);
@@ -180,7 +197,13 @@
                 }, 200);
                 autoPlayedVar = true;
                 localStorage.setItem(AUTO_PLAYED_KEY, true); // Updated localStorage here
-                timerId = null; // Reset timerId after playing the song
+                timerId = null; // Reset timerId after playing the songset
+                setTimeout(() => {
+                    songChangeCheck = true;
+                    isStartingAuto = false;
+                    console.log("SongChangeCheck = true")
+                }, 1000);
+                console.log("Countdown finished.")
             }, WAIT_TIME);
         }
     }
@@ -199,66 +222,126 @@
     }
 
 
-
- function saveCurrentPlaybackState() {
-    const playerState = getPlayerState();
-
-    if (playerState) {
-        const wasPaused = playerState.isPaused;
-        
-        // Resume playback if it's paused
-        if (wasPaused) {
-            Spicetify.Player.play();
-        }
-
-        // Save the volume directly
-        savedPlaybackState = {
-            uri: playerState.progress !== undefined ? playerState.progress : Spicetify.Player.data?.item.uri,
-            position: playerState.progress !== undefined ? playerState.progress : Spicetify.Player.getProgressPercent(),
-            volume: playerState.volume !== undefined ? playerState.volume : Spicetify.Player.getVolume(),
-            repeat: Spicetify.Player.getRepeat(),
-            shuffle: Spicetify.Player.getShuffle(),
-        };
-
-        
-        //console.log("Current track URI:", Spicetify.Player.data?.item.uri);
-
-        console.log("Saved playback URI:", savedPlaybackState.uri);
-        console.log("Saved playback progress:", savedPlaybackState.position);
-        console.log("Saved playback volume:", savedPlaybackState.volume);
-        console.log("Saved playback repeat:", savedPlaybackState.repeat);
-        console.log("Saved playback shuffle:", savedPlaybackState.shuffle);
-    } else {
-        console.log("No player state available. Cannot save playback volume.");
+    function isUserAddedTrack(track) {
+        // Assume user-added tracks have shorter UID length
+        // Adjust this pattern check based on further observations if needed
+        return track.uid.length <= 4;
     }
-}
+
+    function differentiateTracks(playerState) {
+        const userAddedTracks = [];
+        const playlistTracks = [];
+
+        playerState.nextItems.forEach(track => {
+            if (isUserAddedTrack(track)) {
+                userAddedTracks.push(track);
+            } else {
+                playlistTracks.push(track);
+            }
+        });
+
+        console.log('User Added Tracks:', userAddedTracks);
+        console.log('Playlist Tracks:', playlistTracks);
+
+        return {
+            userAddedTracks,
+            playlistTracks
+        };
+    }
 
 
 
+    function saveCurrentPlaybackState() {
+        const playerState = getPlayerState();
+
+        if (playerState) {
+            const wasPaused = playerState.isPaused;
+
+            // Resume playback if it's paused
+            if (wasPaused) {
+                Spicetify.Player.play();
+            }
+
+            // Attempt to get context URI
+            let context_Uri = playerState.context;
+
+            console.log(playerState)
+
+            console.log(context_Uri)
+
+            // Check if the context URI is a playlist
+            if (context_Uri.uri.includes('spotify:playlist:')) {
+                playlisturi = context_Uri.uri;
+            } else {
+                playlisturi = "none";
+            }
+
+            let queueTracks = differentiateTracks(playerState);
 
 
+            // Save the volume directly
+            savedPlaybackState = {
+                playlist: playlisturi,
+                uri: playerState.progress !== undefined ? playerState.progress : Spicetify.Player.data?.item.uri,
+                userQueue: queueTracks.userAddedTracks.map(track => track.uri),
+                position: playerState.progress !== undefined ? playerState.progress : Spicetify.Player.getProgressPercent(),
+                volume: playerState.volume !== undefined ? playerState.volume : Spicetify.Player.getVolume(),
+                repeat: Spicetify.Player.getRepeat(),
+                shuffle: Spicetify.Player.getShuffle(),
+            };
 
+
+            //console.log("Current track URI:", Spicetify.Player.data?.item.uri);
+
+
+            console.log("Saved playback Song URI:", savedPlaybackState.uri);
+            console.log("Saved playback playlist:", savedPlaybackState.playlist);
+            console.log("Saved playback queue: ", savedPlaybackState.userQueue);
+            console.log("-----------------------------------------------------")
+            console.log("Saved playback progress:", savedPlaybackState.position);
+            console.log("Saved playback volume:", savedPlaybackState.volume);
+            console.log("Saved playback repeat:", savedPlaybackState.repeat);
+            console.log("Saved playback shuffle:", savedPlaybackState.shuffle);
+        } else {
+            console.log("No player state available. Cannot save playback volume.");
+        }
+    }
 
 
 
     // Function restorePlaybackState() is updated to include localStorage update
-function restorePlaybackState() {
-    if (savedPlaybackState && autoPlayedVar) { // Check if autoPlayedVar is true
-        console.log("Restoring playback state:", savedPlaybackState);
-        Spicetify.Player.playUri(savedPlaybackState.uri);
-        setTimeout(() => {
-            Spicetify.Player.setVolume(savedPlaybackState.volume);
-            Spicetify.Player.setRepeat(savedPlaybackState.repeat);
-            Spicetify.Player.setShuffle(savedPlaybackState.shuffle);
-            Spicetify.Player.seek(savedPlaybackState.position);
-            savedPlaybackState = null; // Clear saved state after restoring
-            // Hide the autoplay indicator
-            document.getElementById('autoplayIndicator').style.display = 'none';
-        }, 500);
-        autoPlayedVar = false;
-        localStorage.setItem(AUTO_PLAYED_KEY, false); // Updated localStorage here
+    function restorePlaybackState() {
+        if (savedPlaybackState && autoPlayedVar) { // Check if autoPlayedVar is true
+            isRestoring = true;
+            console.log("Restoring playback state:", savedPlaybackState);
+            if (savedPlaybackState.playlist === "none") {
+                Spicetify.Player.playUri(savedPlaybackState.uri);
+            } else {
+                Spicetify.Player.playUri(savedPlaybackState.playlist);
+                Spicetify.addToQueue([{ uri: savedPlaybackState.uri }]);
+                setTimeout(() => {
+                    Spicetify.Player.next();
+                }, 300);
+            }
+            setTimeout(() => {
+                Spicetify.Player.setVolume(savedPlaybackState.volume);
+                Spicetify.Player.setRepeat(savedPlaybackState.repeat);
+                Spicetify.Player.setShuffle(savedPlaybackState.shuffle);
+                Spicetify.Player.seek(savedPlaybackState.position);
+                if (savedPlaybackState.userQueue && savedPlaybackState.userQueue.length > 0) {
+                    savedPlaybackState.userQueue.forEach(uri => {
+                        Spicetify.addToQueue([{ uri: uri }]);
+                    });
+                }
+                savedPlaybackState = null; // Clear saved state after restoring
+                // Hide the autoplay indicator
+                document.getElementById('autoplayIndicator').style.display = 'none';
+                isRestoring = false;
+            }, 800);
+            autoPlayedVar = false;
+            localStorage.setItem(AUTO_PLAYED_KEY, false); // Updated localStorage here
+        }
     }
-}
 
 
     const { Type } = Spicetify.URI;
@@ -268,7 +351,7 @@ function restorePlaybackState() {
         localStorage.setItem("SONG_URI", "spotify:track:" + uriObj.id);
         SONG_URI = localStorage.getItem("SONG_URI") || "spotify:track:4PTG3Z6ehGkBFwjybzWkR8";
         Spicetify.showNotification("Song selected for AutoPlay."),
-        console.log("URI Object:", "spotify:track:" + uriObj.id);
+            console.log("URI Object:", "spotify:track:" + uriObj.id);
     }
 
 
@@ -292,10 +375,26 @@ function restorePlaybackState() {
 
 
 
+    function queueCheck() {
 
 
+        if (autoPlayedVar && songChangeCheck && !isStartingAuto && !isRestoring) {
+            let queue = Spicetify.Queue.nextTracks;
+            let lastQueue;
+            if (queue !== lastQueue) {
+                console.log("Calling song change event")
+                songChange();
+            }
+            else {
+                console.log("Update queue")
+                lastQueue = queue;
+            }
+        }
+        else {
+            console.log("No song change.")
+        }
 
-
+    }
 
 
     function initialize() {
@@ -310,6 +409,7 @@ function restorePlaybackState() {
         if (player) {
             console.log("Spicetify player found. Starting playback state check.");
             setInterval(checkPlaybackState, 1000); // Check playback state every second
+            //setInterval(queueCheck, 100);
         } else {
             console.log("Spicetify player not ready. Retrying initialization in 1 second.");
             setTimeout(initialize, 1000);
