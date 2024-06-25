@@ -1,6 +1,6 @@
 // NAME: Autoplay
 // AUTHOR: uAreASimp
-// VERSION: 0.3.5
+// VERSION: 0.3.6
 // DESCRIPTION: Autoplays selected song after having song be paused for 5 seconds, pause song to revert back to original before autoplay.
 /// <reference path="../../../Local/spicetify/globals.d.ts" />
 
@@ -445,7 +445,7 @@
 
     function LastFMFarmFunc() {
 
-        if (autoPlayedVar && LFMFarmVar) {
+        if (autoPlayedVar && LFMFarmVar && !isRestoring && !isStartingAuto) {
             songProgress = Spicetify.Player.getProgressPercent();
 
             if (songProgress >= 0.55) {
