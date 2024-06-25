@@ -1,6 +1,6 @@
 // NAME: Autoplay
 // AUTHOR: uAreASimp
-// VERSION: 0.3
+// VERSION: 0.3.5
 // DESCRIPTION: Autoplays selected song after having song be paused for 5 seconds, pause song to revert back to original before autoplay.
 /// <reference path="../../../Local/spicetify/globals.d.ts" />
 
@@ -15,8 +15,10 @@
 
     // Constants
     const BUTTON_NAME_TEXT = "AutoPlay";
+    const BUTTON2_NAME_TEXT = "Last FM Farm"
     const STORAGE_KEY = "autoplay_spicetify";
     const AUTO_PLAYED_KEY = "is_auto_played"
+    const LastFMToggle = "is_LFM_Toggle";
     let playlisturi;
 
 
@@ -49,6 +51,7 @@
     let autoPlayVar = localStorage.getItem(STORAGE_KEY) === "true";
     let autoPlayedVar = localStorage.getItem(AUTO_PLAYED_KEY); // Updated key here
     let SONG_URI = localStorage.getItem("SONG_URI") || "spotify:track:4PTG3Z6ehGkBFwjybzWkR8";
+    let LFMFarmVar = localStorage.getItem(LastFMToggle) === "true";
     let savedPlaybackState = null;
     let songChangeCheck = false;
     let isRestoring = false;
@@ -64,6 +67,8 @@
 
     // Reference to the button instance
     let autoplayButton;
+    let LFMButton;
+    let songProgress;
 
     // Function to toggle autoplay variable and update localStorage
     function toggleAutoPlay() {
@@ -105,6 +110,46 @@
 
     // Initialize the button
     updateButton();
+
+
+    // Function to toggle LFM Farm variable and update localStorage
+    function toggleLastFMFarm() {
+        LFMFarmVar = !LFMFarmVar; // Toggle the variable
+        localStorage.setItem(LastFMToggle, LFMFarmVar); // Save to localStorage
+
+        updateFMButton(); // Update the button's appearance
+        Spicetify.showNotification("LastFM farm toggled.");
+    }
+
+    // Function to update the LFM Farm button's appearance based on LFMFarmVar
+    function updateFMButton() {
+        const FMicon = LFMFarmVar
+            ? `<svg role="img" height="16" width="16" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M3 2l10 6-10 6V2z"></path>
+                  </svg>`
+            : `<svg role="img" height="16" width="16" viewBox="0 0 16 16" fill="currentColor">
+                     <path d="M3 2h3v12H3zm7 0h3v12h-3z"></path>`;
+        const FMbuttonText = LFMFarmVar
+            ? `${BUTTON2_NAME_TEXT} (On)`
+            : `${BUTTON2_NAME_TEXT} (Off)`;
+
+        if (LFMButton) {
+            LFMButton.label = FMbuttonText;
+            LFMButton.icon = FMicon;
+        } else {
+            LFMButton = new Spicetify.Topbar.Button(
+                FMbuttonText,
+                FMicon,
+                self => {
+                    toggleLastFMFarm();
+                }
+            );
+        }
+    }
+
+    // Initialize the LFM Farm button
+    updateFMButton();
+
 
     const WAIT_TIME = 5000; // 5 seconds
     let timerId = null;
@@ -397,6 +442,27 @@
     }
 
 
+
+    function LastFMFarmFunc() {
+
+        if (autoPlayedVar && LFMFarmVar) {
+            songProgress = Spicetify.Player.getProgressPercent();
+
+            if (songProgress >= 0.55) {
+                Spicetify.Player.next();
+                Spicetify.showNotification("LastFM farm: Song skip.");
+
+            }
+
+        }
+        //console.log(songProgress)
+
+    };
+
+
+
+
+
     function initialize() {
         console.log("Initializing script...");
         if (typeof Spicetify === "undefined" || !Spicetify.Player) {
@@ -409,7 +475,7 @@
         if (player) {
             console.log("Spicetify player found. Starting playback state check.");
             setInterval(checkPlaybackState, 1000); // Check playback state every second
-            //setInterval(queueCheck, 100);
+            setInterval(LastFMFarmFunc, 1000);
         } else {
             console.log("Spicetify player not ready. Retrying initialization in 1 second.");
             setTimeout(initialize, 1000);
