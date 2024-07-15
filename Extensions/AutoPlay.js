@@ -1,6 +1,6 @@
 // NAME: Autoplay
 // AUTHOR: uAreASimp
-// VERSION: 0.3.6
+// VERSION: 0.3.7
 // DESCRIPTION: Autoplays selected song after having song be paused for 5 seconds, pause song to revert back to original before autoplay.
 /// <reference path="../../../Local/spicetify/globals.d.ts" />
 
@@ -20,6 +20,7 @@
     const AUTO_PLAYED_KEY = "is_auto_played"
     const LastFMToggle = "is_LFM_Toggle";
     let playlisturi;
+    let lastQueue;
 
 
     // Add CSS for the textbox
@@ -157,34 +158,34 @@
 
     function checkPlaybackState() {
         if (!autoPlayVar) {
-            //console.log("Auto play is not enabled. Skipping playback state check.");
+            console.log("Auto play is not enabled. Skipping playback state check.");
             clearTimer();
             return;
         }
 
-        //console.log("Checking playback state...");
+        console.log("Checking playback state...");
         const playerState = getPlayerState();
-        //console.log(playerState)
+        console.log(playerState)
 
         if (!playerState) {
-            //console.log("No player state available.");
+            console.log("No player state available.");
             return;
         }
 
         const isPlaying = !playerState.isPaused;
 
         if (isPlaying) {
-            //console.log("Song is playing. Clearing timer if it exists.");
+            console.log("Song is playing. Clearing timer if it exists.");
             clearTimer();
             lastPlayerState = playerState;
             return;
         } else if (playerState.isPaused && autoPlayVar) {
             if (autoPlayedVar) {
-                //console.log("Restoring playback.")
+                console.log("Restoring playback.")
                 restorePlaybackState();
                 return;
             } else {
-                //console.log("No song playing. Starting timer.");
+                console.log("No song playing. Starting timer.");
                 startTimer();
                 return;
             }
@@ -196,6 +197,7 @@
     function songChange() {
         console.log("Songchange check...")
         if (songChangeCheck === true && isRestoring === false && isStartingAuto === false) {
+            Spicetify.Player.setVolume(savedPlaybackState.volume);
             savedPlaybackState = null; // Clear saved state after restoring
             autoPlayedVar = false;
             localStorage.setItem(AUTO_PLAYED_KEY, false); // Updated localStorage here
@@ -246,6 +248,7 @@
                 setTimeout(() => {
                     songChangeCheck = true;
                     isStartingAuto = false;
+                    lastQueue = Spicetify.Queue.nextTracks;
                     console.log("SongChangeCheck = true")
                 }, 1000);
                 console.log("Countdown finished.")
@@ -423,9 +426,8 @@
     function queueCheck() {
 
 
-        if (autoPlayedVar && songChangeCheck && !isStartingAuto && !isRestoring) {
+        if (autoPlayedVar) {
             let queue = Spicetify.Queue.nextTracks;
-            let lastQueue;
             if (queue !== lastQueue) {
                 console.log("Calling song change event")
                 songChange();
@@ -462,7 +464,6 @@
 
 
 
-
     function initialize() {
         console.log("Initializing script...");
         if (typeof Spicetify === "undefined" || !Spicetify.Player) {
@@ -476,6 +477,7 @@
             console.log("Spicetify player found. Starting playback state check.");
             setInterval(checkPlaybackState, 1000); // Check playback state every second
             setInterval(LastFMFarmFunc, 1000);
+            setInterval(queueCheck, 1000);
         } else {
             console.log("Spicetify player not ready. Retrying initialization in 1 second.");
             setTimeout(initialize, 1000);
