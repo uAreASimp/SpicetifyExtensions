@@ -1,6 +1,6 @@
 // NAME: Autoplay
 // AUTHOR: uAreASimp
-// VERSION: 0.3.7
+// VERSION: 0.3.8
 // DESCRIPTION: Autoplays selected song after having song be paused for 5 seconds, pause song to revert back to original before autoplay.
 /// <reference path="../../../Local/spicetify/globals.d.ts" />
 
@@ -21,6 +21,8 @@
     const LastFMToggle = "is_LFM_Toggle";
     let playlisturi;
     let lastQueue;
+    let queue;
+    let LastFMSkipping;
 
 
     // Add CSS for the textbox
@@ -196,7 +198,7 @@
 
     function songChange() {
         console.log("Songchange check...")
-        if (songChangeCheck === true && isRestoring === false && isStartingAuto === false) {
+        if (songChangeCheck === true && isRestoring === false && isStartingAuto === false && LastFMSkipping === false) {
             Spicetify.Player.setVolume(savedPlaybackState.volume);
             savedPlaybackState = null; // Clear saved state after restoring
             autoPlayedVar = false;
@@ -426,8 +428,8 @@
     function queueCheck() {
 
 
-        if (autoPlayedVar) {
-            let queue = Spicetify.Queue.nextTracks;
+        if (autoPlayedVar && !LastFMSkipping) {
+            queue = Spicetify.Queue.nextTracks;
             if (queue !== lastQueue) {
                 console.log("Calling song change event")
                 songChange();
@@ -451,12 +453,19 @@
             songProgress = Spicetify.Player.getProgressPercent();
 
             if (songProgress >= 0.55) {
-                Spicetify.Player.next();
-                Spicetify.showNotification("LastFM farm: Song skip.");
+                LastFMSkipping = true;
+                    Spicetify.Player.next();
+                    queue = Spicetify.Queue.nextTracks;
+                    lastQueue = queue;
+                    Spicetify.showNotification("LastFM farm: Song skip.");
+                    setTimeout(() => {
+                        queue = Spicetify.Queue.nextTracks;
+                        lastQueue = queue;
+                        LastFMSkipping = false;
+                    }, 300);
+                }
 
             }
-
-        }
         //console.log(songProgress)
 
     };
