@@ -1,6 +1,6 @@
 // NAME: Autoplay
 // AUTHOR: uAreASimp
-// VERSION: 0.3.8
+// VERSION: 0.3.8.1
 // DESCRIPTION: Autoplays selected song after having song be paused for 5 seconds, pause song to revert back to original before autoplay.
 /// <reference path="../../../Local/spicetify/globals.d.ts" />
 
@@ -160,34 +160,34 @@
 
     function checkPlaybackState() {
         if (!autoPlayVar) {
-            console.log("Auto play is not enabled. Skipping playback state check.");
+            //console.log("Auto play is not enabled. Skipping playback state check.");
             clearTimer();
             return;
         }
 
-        console.log("Checking playback state...");
+        //console.log("Checking playback state...");
         const playerState = getPlayerState();
-        console.log(playerState)
+        //console.log(playerState)
 
         if (!playerState) {
-            console.log("No player state available.");
+            //console.log("No player state available.");
             return;
         }
 
         const isPlaying = !playerState.isPaused;
 
         if (isPlaying) {
-            console.log("Song is playing. Clearing timer if it exists.");
+            //console.log("Song is playing. Clearing timer if it exists.");
             clearTimer();
             lastPlayerState = playerState;
             return;
         } else if (playerState.isPaused && autoPlayVar) {
             if (autoPlayedVar) {
-                console.log("Restoring playback.")
+                //console.log("Restoring playback.")
                 restorePlaybackState();
                 return;
             } else {
-                console.log("No song playing. Starting timer.");
+                //console.log("No song playing. Starting timer.");
                 startTimer();
                 return;
             }
@@ -197,7 +197,7 @@
 
 
     function songChange() {
-        console.log("Songchange check...")
+        //console.log("Songchange check...")
         if (songChangeCheck === true && isRestoring === false && isStartingAuto === false && LastFMSkipping === false) {
             Spicetify.Player.setVolume(savedPlaybackState.volume);
             savedPlaybackState = null; // Clear saved state after restoring
@@ -205,7 +205,7 @@
             localStorage.setItem(AUTO_PLAYED_KEY, false); // Updated localStorage here
             document.getElementById('autoplayIndicator').style.display = 'none';
             songChangeCheck = false;
-            console.log("Songchange check approved.")
+            //console.log("Songchange check approved.")
         }
     }
 
@@ -233,7 +233,7 @@
         if (timerId === null && autoPlayVar) { // Check if autoPlayVar is true
             timerId = setTimeout(() => {
                 isStartingAuto = true;
-                console.log(`No song playing for ${WAIT_TIME} ms. Auto-playing song: ${SONG_URI}`);
+                //console.log(`No song playing for ${WAIT_TIME} ms. Auto-playing song: ${SONG_URI}`);
                 saveCurrentPlaybackState();
                 Spicetify.Platform.PlayerAPI.clearQueue();
                 Spicetify.Player.setVolume(0);
@@ -251,9 +251,9 @@
                     songChangeCheck = true;
                     isStartingAuto = false;
                     lastQueue = Spicetify.Queue.nextTracks;
-                    console.log("SongChangeCheck = true")
+                    //console.log("SongChangeCheck = true")
                 }, 1000);
-                console.log("Countdown finished.")
+                //console.log("Countdown finished.")
             }, WAIT_TIME);
         }
     }
@@ -267,7 +267,7 @@
     }
 
     async function playSong(uri) {
-        console.log("Attempting to play song:", uri);
+        //console.log("Attempting to play song:", uri);
         await Spicetify.Player.playUri(uri);
     }
 
@@ -290,8 +290,8 @@
             }
         });
 
-        console.log('User Added Tracks:', userAddedTracks);
-        console.log('Playlist Tracks:', playlistTracks);
+        //console.log('User Added Tracks:', userAddedTracks);
+        //console.log('Playlist Tracks:', playlistTracks);
 
         return {
             userAddedTracks,
@@ -315,9 +315,9 @@
             // Attempt to get context URI
             let context_Uri = playerState.context;
 
-            console.log(playerState)
+            //console.log(playerState)
 
-            console.log(context_Uri)
+            //console.log(context_Uri)
 
             // Check if the context URI is a playlist
             if (context_Uri.uri.includes('spotify:playlist:')) {
@@ -344,16 +344,16 @@
             //console.log("Current track URI:", Spicetify.Player.data?.item.uri);
 
 
-            console.log("Saved playback Song URI:", savedPlaybackState.uri);
-            console.log("Saved playback playlist:", savedPlaybackState.playlist);
-            console.log("Saved playback queue: ", savedPlaybackState.userQueue);
-            console.log("-----------------------------------------------------")
-            console.log("Saved playback progress:", savedPlaybackState.position);
-            console.log("Saved playback volume:", savedPlaybackState.volume);
-            console.log("Saved playback repeat:", savedPlaybackState.repeat);
-            console.log("Saved playback shuffle:", savedPlaybackState.shuffle);
+            //console.log("Saved playback Song URI:", savedPlaybackState.uri);
+            //console.log("Saved playback playlist:", savedPlaybackState.playlist);
+            //console.log("Saved playback queue: ", savedPlaybackState.userQueue);
+            //console.log("-----------------------------------------------------")
+            //console.log("Saved playback progress:", savedPlaybackState.position);
+            //console.log("Saved playback volume:", savedPlaybackState.volume);
+            //console.log("Saved playback repeat:", savedPlaybackState.repeat);
+            //console.log("Saved playback shuffle:", savedPlaybackState.shuffle);
         } else {
-            console.log("No player state available. Cannot save playback volume.");
+            //console.log("No player state available. Cannot save playback volume.");
         }
     }
 
@@ -363,7 +363,7 @@
     function restorePlaybackState() {
         if (savedPlaybackState && autoPlayedVar) { // Check if autoPlayedVar is true
             isRestoring = true;
-            console.log("Restoring playback state:", savedPlaybackState);
+            //console.log("Restoring playback state:", savedPlaybackState);
             if (savedPlaybackState.playlist === "none") {
                 Spicetify.Player.playUri(savedPlaybackState.uri);
             } else {
@@ -431,16 +431,16 @@
         if (autoPlayedVar && !LastFMSkipping) {
             queue = Spicetify.Queue.nextTracks;
             if (queue !== lastQueue) {
-                console.log("Calling song change event")
+                //console.log("Calling song change event")
                 songChange();
             }
             else {
-                console.log("Update queue")
+                //console.log("Update queue")
                 lastQueue = queue;
             }
         }
         else {
-            console.log("No song change.")
+            //console.log("No song change.")
         }
 
     }
