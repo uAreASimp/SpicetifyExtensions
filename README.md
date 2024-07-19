@@ -43,7 +43,6 @@ Saves queue and playlist and adds it back after autoplay.
 
 Copy `AutoPlay.js` into your [Spicetify](https://github.com/khanhas/spicetify-cli) extensions directory:
 
-| Platform | Path |
 | **Windows** | `%userprofile%\AppData\Roaming\spicetify\Extensions` |
 
 After putting the extension file into the correct folder, run the following command to install the extension:
